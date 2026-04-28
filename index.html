@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FF Sensitivity Optimizer — Offline</title>
+<style>
+  :root {
+    --bg: #06060c;
+    --bg2: #0d0d16;
+    --card: #12121e;
+    --card2: #181828;
+    --border: #1f1f35;
+    --border2: #2a2a48;
+    --fg: #e4e4f0;
+    --fg2: #c0c0d8;
+    --muted: #6a6a88;
+    --accent: #ff6a00;
+    --accent2: #ff9b2e;
+    --accent-dim: rgba(255,106,0,0.12);
+    --accent-glow: rgba(255,106,0,0.3);
+    --fire1: #ff6a00;
+    --fire2: #ff3d00;
+    --fire3: #c62828;
+    --green: #00e676;
+    --green-dim: rgba(0,230,118,0.12);
+    --red: #ff1744;
+    --red-dim: rgba(255,23,68,0.12);
+    --yellow: #ffd600;
+    --yellow-dim: rgba(255,214,0,0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-xs: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .bg-fx {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  }
+  .bg-fx::before {
+    content: '';
+    position: absolute; top: -30%; left: -20%; width: 140%; height: 160%;
+    background:
+      radial-gradient(ellipse 600px 400px at 25% 15%, rgba(255,106,0,0.07), transparent),
+      radial-gradient(ellipse 500px 500px at 75% 85%, rgba(198,40,40,0.05), transparent),
+      radial-gradient(ellipse 800px 300px at 50% 50%, rgba(255,155,46,0.03), transparent);
+    animation: bgMove 25s ease-in-out infinite alternate;
+  }
+  @keyframes bgMove {
+    0% { transform: translate(0,0) scale(1); }
+    100% { transform: translate(-2%,1%) scale(1.02); }
+  }
+
+  .ember {
+    position: absolute; border-radius: 50%; opacity: 0;
+    animation: emberRise linear infinite;
+  }
+  @keyframes emberRise {
+    0%   { opacity:0; transform: translateY(0) scale(.4); }
+    15%  { opacity:.7; }
+    100% { opacity:0; transform: translateY(-140px) scale(0); }
+  }
+
+  .app { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 16px 14px 80px; }
+
+  /* ─── HEADER ─── */
+  header { text-align: center; padding: 32px 0 24px; }
+  .logo {
+    width: 60px; height: 60px; margin: 0 auto 14px;
+    background: linear-gradient(135deg, var(--fire1), var(--fire3));
+    border-radius: 16px; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 28px var(--accent-glow);
+    animation: pulse 3.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 6px 28px var(--accent-glow); transform: scale(1); }
+    50% { box-shadow: 0 8px 44px rgba(255,106,0,.45); transform: scale(1.03); }
+  }
+  .logo svg { width: 30px; height: 30px; fill: #fff; }
+  header h1 {
+    font-size: clamp(22px,4.5vw,36px); font-weight: 800;
+    text-transform: uppercase; letter-spacing: 2px; line-height: 1.15;
+    background: linear-gradient(135deg, #fff 40%, var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header .sub { color: var(--muted); font-size: 13px; margin-top: 6px; font-weight: 400; }
+  .offline-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; margin-top: 10px;
+    background: var(--green-dim); border: 1px solid rgba(0,230,118,.18);
+    border-radius: 20px; font-size: 10px; font-weight: 700; color: var(--green);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .offline-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink 2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+
+  /* ─── STEPS ─── */
+  .steps { display: flex; justify-content: center; gap: 6px; margin-bottom: 28px; }
+  .step-d { width: 48px; height: 4px; border-radius: 4px; background: var(--border); transition: all .4s; }
+  .step-d.active { background: linear-gradient(90deg,var(--fire1),var(--accent2)); box-shadow: 0 0 10px var(--accent-glow); }
+  .step-d.done { background: var(--green); }
+
+  /* ─── CARD ─── */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px 20px; margin-bottom: 16px;
+    transition: border-color .3s;
+  }
+  .card:hover { border-color: var(--border2); }
+  .card-h {
+    font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px;
+    margin-bottom: 18px; display: flex; align-items: center; gap: 10px;
+  }
+  .card-h svg { width: 16px; height: 16px; fill: var(--accent); flex-shrink: 0; }
+  .sn {
+    background: linear-gradient(135deg,var(--fire1),var(--fire3)); color: #fff;
+    width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center;
+    justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0;
+  }
+  .auto-tag {
+    display: none; align-items: center; gap: 4px; padding: 2px 7px;
+    background: var(--green-dim); border: 1px solid rgba(0,230,118,.18);
+    border-radius: 5px; font-size: 9px; font-weight: 700; color: var(--green);
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .auto-tag.show { display: inline-flex; }
+  .auto-tag svg { width: 8px; height: 8px; fill: var(--green); }
+
+  /* ─── SEARCH ─── */
+  .search { position: relative; margin-bottom: 14px; }
+  .search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; fill: var(--muted); }
+  .search input {
+    width: 100%; padding: 11px 12px 11px 36px; background: var(--bg2);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--fg); font-size: 13px; outline: none; transition: all .25s;
+    font-family: inherit;
+  }
+  .search input::placeholder { color: var(--muted); }
+  .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+
+  /* ─── DEVICE GRID ─── */
+  .dev-cat { margin-bottom: 14px; }
+  .cat-lbl {
+    font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--muted); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+  }
+  .tier { padding: 1px 6px; border-radius: 4px; font-size: 9px; font-weight: 800; letter-spacing: .5px; }
+  .tier-low { background: var(--red-dim); color: var(--red); }
+  .tier-mid { background: var(--yellow-dim); color: var(--yellow); }
+  .tier-high { background: var(--green-dim); color: var(--green); }
+  .dev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 5px; }
+  .dev-btn {
+    padding: 7px 9px; background: var(--bg2); border: 1px solid transparent;
+    border-radius: var(--radius-xs); color: var(--fg2); font-size: 11px; font-weight: 500;
+    cursor: pointer; transition: all .18s; text-align: left; font-family: inherit;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .dev-btn:hover { background: var(--card2); border-color: var(--border); }
+  .dev-btn.sel { background: var(--accent-dim); border-color: var(--accent); color: var(--accent2); font-weight: 700; }
+  .dev-btn.hide { display: none; }
+  .no-res { color: var(--muted); font-size: 12px; text-align: center; padding: 20px; }
+
+  /* ─── OPTION BTNS ─── */
+  .opt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .opt-btn {
+    padding: 13px 14px; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--fg); font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .22s; display: flex; align-items: center; gap: 10px;
+    font-family: inherit;
+  }
+  .opt-btn svg { width: 18px; height: 18px; fill: var(--muted); transition: fill .22s; flex-shrink: 0; }
+  .opt-btn:hover { background: var(--card2); border-color: var(--border2); transform: translateY(-1px); }
+  .opt-btn.sel { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+  .opt-btn.sel svg { fill: var(--accent2); }
+
+  /* ─── GEN BTN ─── */
+  .gen-btn {
+    width: 100%; padding: 16px; border: none; border-radius: 14px; color: #fff;
+    font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 3px;
+    cursor: pointer; transition: all .3s; position: relative; overflow: hidden;
+    font-family: inherit;
+    background: linear-gradient(135deg, var(--fire1), var(--fire2), var(--fire3));
+    background-size: 200% 200%; animation: gShift 4s ease infinite;
+  }
+  @keyframes gShift { 0%,100%{background-position:0% 50%}50%{background-position:100% 50%} }
+  .gen-btn::after {
+    content:''; position:absolute; inset:0;
+    background: linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);
+    transform: translateX(-100%); transition: transform .5s;
+  }
+  .gen-btn:hover::after { transform: translateX(100%); }
+  .gen-btn:hover { box-shadow: 0 8px 36px rgba(255,106,0,.35); transform: translateY(-2px); }
+  .gen-btn:active { transform: translateY(0); }
+  .gen-btn:disabled { opacity:.35; cursor:not-allowed; transform:none!important; box-shadow:none!important; }
+  .gen-btn:disabled::after { display:none; }
+
+  /* ─── RESULT ─── */
+  .result { display:none; animation: rSlide .5s ease; }
+  .result.show { display:block; }
+  @keyframes rSlide { from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)} }
+
+  .r-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .r-head h2 { font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; display:flex; align-items:center; gap:8px; }
+  .r-head h2 svg { width: 20px; height: 20px; fill: var(--accent); }
+  .r-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .act-btn {
+    padding: 9px 16px; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); color: var(--fg); font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 6px;
+    font-family: inherit;
+  }
+  .act-btn svg { width: 13px; height: 13px; fill: var(--muted); transition: fill .2s; }
+  .act-btn:hover { border-color: var(--accent); background: var(--accent-dim); }
+  .act-btn:hover svg { fill: var(--accent2); }
+  .act-btn.ok { border-color: var(--green); color: var(--green); }
+  .act-btn.ok svg { fill: var(--green); }
+
+  /* Tags */
+  .tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+  .tag {
+    padding: 5px 12px; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-xs); font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .tag svg { width: 11px; height: 11px; fill: var(--accent); }
+
+  /* ─── SENS ROWS ─── */
+  .s-row {
+    display: flex; align-items: center; gap: 14px; padding: 12px 0;
+    border-bottom: 1px solid rgba(31,31,53,.6);
+  }
+  .s-row:last-child { border-bottom: none; }
+  .s-lbl { width: 100px; font-size: 12px; font-weight: 700; color: var(--muted); flex-shrink:0; letter-spacing:.3px; }
+  .s-bar-wrap { flex: 1; height: 7px; background: var(--bg2); border-radius: 7px; overflow: hidden; }
+  .s-bar { height: 100%; border-radius: 7px; transition: width .7s cubic-bezier(.22,1,.36,1); width: 0; }
+  .s-val { width: 36px; text-align: right; font-size: 19px; font-weight: 800; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .bl { background: linear-gradient(90deg, #c62828, #ff3d00); }
+  .bm { background: linear-gradient(90deg, #ff6a00, #ff9b2e); }
+  .bh { background: linear-gradient(90deg, #ff9b2e, #ffd600); }
+  .bv { background: linear-gradient(90deg, #ffd600, #00e676); }
+
+  /* Slider row */
+  .adj-row { display: flex; align-items: center; gap: 14px; padding: 6px 0; }
+  .adj-slider {
+    flex: 1; -webkit-appearance: none; appearance: none;
+    height: 4px; background: var(--border); border-radius: 4px; outline: none;
+    cursor: pointer;
+  }
+  .adj-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; box-shadow: 0 0 8px var(--accent-glow);
+  }
+  .adj-slider::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%; border: none;
+    background: var(--accent); cursor: pointer; box-shadow: 0 0 8px var(--accent-glow);
+  }
+
+  /* Toggle */
+  .toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; cursor: pointer; }
+  .toggle-track {
+    width: 38px; height: 20px; background: var(--border); border-radius: 20px;
+    position: relative; transition: background .3s; flex-shrink: 0;
+  }
+  .toggle-track.on { background: var(--accent); }
+  .toggle-track::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+    background: #fff; border-radius: 50%; transition: transform .3s;
+  }
+  .toggle-track.on::after { transform: translateX(18px); }
+  .toggle-lbl { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+  /* Tip */
+  .tip {
+    background: rgba(255,106,0,.04); border: 1px solid rgba(255,106,0,.12);
+    border-radius: var(--radius-sm); padding: 16px 18px; margin-top: 18px;
+  }
+  .tip h4 {
+    font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--accent2); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+  }
+  .tip h4 svg { width: 14px; height: 14px; fill: var(--accent2); }
+  .tip p { font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+
+  /* ─── HISTORY ─── */
+  .hist-card { margin-top: 24px; }
+  .hist-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius-xs); margin-bottom: 6px; cursor: pointer;
+    transition: all .2s; gap: 10px;
+  }
+  .hist-item:hover { border-color: var(--border2); background: var(--card2); }
+  .hist-info { flex: 1; min-width: 0; }
+  .hist-info .hi-name { font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hist-info .hi-meta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .hist-vals { display: flex; gap: 6px; flex-shrink: 0; }
+  .hist-v { font-size: 10px; font-weight: 800; color: var(--accent2); background: var(--accent-dim); padding: 2px 6px; border-radius: 4px; }
+  .hist-del {
+    width: 24px; height: 24px; border: none; background: transparent;
+    color: var(--muted); cursor: pointer; border-radius: 4px; transition: all .2s;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .hist-del:hover { background: var(--red-dim); color: var(--red); }
+  .hist-del svg { width: 12px; height: 12px; fill: currentColor; }
+  .empty-hist { text-align: center; color: var(--muted); font-size: 12px; padding: 24px; }
+
+  /* ─── TOAST ─── */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(70px);
+    padding: 10px 20px; background: var(--card); border: 1px solid var(--green);
+    border-radius: var(--radius-sm); color: var(--green); font-size: 12px; font-weight: 700;
+    z-index: 200; opacity: 0; transition: all .35s cubic-bezier(.22,1,.36,1);
+    display: flex; align-items: center; gap: 6px; pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast svg { width: 14px; height: 14px; fill: var(--green); }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* ─── RESPONSIVE ─── */
+  @media(max-width:600px){
+    .app{padding:10px 10px 60px}
+    .card{padding:18px 14px}
+    .dev-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}
+    .opt-grid{grid-template-columns:1fr 1fr}
+    .s-lbl{width:78px;font-size:10px}
+    .s-val{font-size:16px;width:30px}
+    .r-head{flex-direction:column;align-items:flex-start}
+    .tag{font-size:10px;padding:4px 8px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+  }
+
+  /* Print / export canvas hidden */
+  #expCanvas { display: none; }
+</style>
+</head>
+<body>
+
+<div class="bg-fx" id="bgFx"></div>
+
+<div class="app">
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/><circle cx="12" cy="12" r="3" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="12" y1="2" x2="12" y2="6" stroke="#fff" stroke-width="1.5"/><line x1="12" y1="18" x2="12" y2="22" stroke="#fff" stroke-width="1.5"/><line x1="2" y1="12" x2="6" y2="12" stroke="#fff" stroke-width="1.5"/><line x1="18" y1="12" x2="22" y2="12" stroke="#fff" stroke-width="1.5"/></svg>
+    </div>
+    <h1>Free Fire Sensitivity<br>Optimizer</h1>
+    <p class="sub">Precision-tuned for your exact device and playstyle</p>
+    <div class="offline-badge"><span class="dot"></span> 100% Offline</div>
+  </header>
+
+  <div class="steps">
+    <div class="step-d active" id="s1"></div>
+    <div class="step-d" id="s2"></div>
+    <div class="step-d" id="s3"></div>
+    <div class="step-d" id="s4"></div>
+  </div>
+
+  <!-- Step 1: Device -->
+  <div class="card">
+    <div class="card-h">
+      <span class="sn">1</span> Select Your Device
+      <svg viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>
+    </div>
+    <div class="search">
+      <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <input type="text" id="devSearch" placeholder="Search device name..." autocomplete="off">
+    </div>
+    <div id="devList"></div>
+  </div>
+
+  <!-- Step 2: Performance -->
+  <div class="card">
+    <div class="card-h">
+      <span class="sn">2</span> Performance
+      <span class="auto-tag" id="autoPerf"><svg viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg> Auto</span>
+      <svg viewBox="0 0 24 24"><path d="M12 2c-5.52 0-10 4.48-10 10s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zM17.9 17.39A9.826 9.826 0 0012 4c-1.67 0-3.22.42-4.6 1.15l2.6 2.6c.68-.15 1.39-.25 2-.25 3.87 0 7 3.13 7 7 0 .61-.1 1.32-.25 2l2.15 1.89z"/></svg>
+    </div>
+    <div class="opt-grid" id="perfGrid"></div>
+  </div>
+
+  <!-- Step 3: Screen Size -->
+  <div class="card">
+    <div class="card-h">
+      <span class="sn">3</span> Screen Size
+      <span class="auto-tag" id="autoScr"><svg viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg> Auto</span>
+      <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/></svg>
+    </div>
+    <div class="opt-grid" id="scrGrid"></div>
+  </div>
+
+  <!-- Step 4: Playstyle -->
+  <div class="card">
+    <div class="card-h">
+      <span class="sn">4</span> Playstyle
+      <svg viewBox="0 0 24 24"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+    </div>
+    <div class="opt-grid" id="styleGrid"></div>
+  </div>
+
+  <button class="gen-btn" id="genBtn" disabled>Optimize Sensitivity</button>
+
+  <!-- Result -->
+  <div class="result" id="resultPanel">
+    <div class="card" style="margin-top:20px;border-color:rgba(255,106,0,.18)">
+      <div class="r-head">
+        <h2><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/><circle cx="12" cy="12" r="3"/></svg> Your Settings</h2>
+        <div class="r-actions">
+          <button class="act-btn" id="copyBtn"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> Copy</button>
+          <button class="act-btn" id="saveBtn"><svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg> Save</button>
+          <button class="act-btn" id="imgBtn"><svg viewBox="0 0 24 24"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg> Image</button>
+        </div>
+      </div>
+
+      <div class="tags" id="tags"></div>
+
+      <div class="toggle-row" id="adjToggle">
+        <div class="toggle-track" id="adjTrack"></div>
+        <span class="toggle-lbl">Fine-tune with sliders</span>
+      </div>
+
+      <div id="sensDisplay"></div>
+      <div id="sensSliders" style="display:none"></div>
+
+      <div class="tip" id="tipBox">
+        <h4><svg viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg> Pro Tip</h4>
+        <p id="tipTxt"></p>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card hist-card" id="histCard" style="display:none">
+      <div class="card-h">
+        <svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 00-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0013 21a9 9 0 000-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+        Saved History
+      </div>
+      <div id="histList"></div>
+    </div>
+  </div>
+</div>
+
+<canvas id="expCanvas"></canvas>
+
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// SVG ICON TEMPLATES (fully offline)
+// ═══════════════════════════════════════════
+const ICO = {
+  batteryQ: '<svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>',
+  batteryH: '<svg viewBox="0 0 24 24"><path d="M17 4h-3V2h-4v2H7c-.55 0-1 .45-1 1v16c0 .55.45 1 1 1h10c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>',
+  batteryF: '<svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4zm-1.34 15.33H8.67V6.67h5.66v12.66z"/></svg>',
+  phoneS: '<svg viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>',
+  tablet: '<svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/></svg>',
+  monitor: '<svg viewBox="0 0 24 24"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H3V4h18v12z"/></svg>',
+  fire: '<svg viewBox="0 0 24 24"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67zM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8z"/></svg>',
+  balance: '<svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>',
+  crosshair: '<svg viewBox="0 0 24 24"><path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10 10-4.49 10-10S17.51 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3-8c0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3 3 1.34 3 3z"/></svg>',
+};
+
+// ═══════════════════════════════════════════
+// DEVICE DATABASE — 200+ devices
+// ═══════════════════════════════════════════
+const DB = [
+  // ── LOW-END ──
+  {n:"Samsung Galaxy J2",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Samsung Galaxy J2 Pro",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Samsung Galaxy J3",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Samsung Galaxy J5",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Samsung Galaxy J5 Pro",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Samsung Galaxy J7",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Samsung Galaxy J7 Pro",p:"Low-end",r:"3GB",s:"Medium"},
+  {n:"Samsung Galaxy J7 Prime",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Samsung Galaxy J7 Max",p:"Low-end",r:"3GB",s:"Large"},
+  {n:"Samsung Galaxy A10",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Samsung Galaxy A10s",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Samsung Galaxy A20",p:"Low-end",r:"3GB",s:"Medium"},
+  {n:"Samsung Galaxy A2 Core",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Samsung Galaxy Core 2",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Samsung Galaxy Grand Prime",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Samsung Galaxy S4",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Samsung Galaxy S5",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Samsung Galaxy S5 Neo",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Samsung Galaxy Tab A 8.0",p:"Low-end",r:"2GB",s:"Large"},
+  {n:"Xiaomi Redmi 5A",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Xiaomi Redmi 6",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Xiaomi Redmi 6A",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Xiaomi Redmi 7",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Xiaomi Redmi 7A",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Xiaomi Redmi 8",p:"Low-end",r:"3GB",s:"Medium"},
+  {n:"Xiaomi Redmi 8A",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Xiaomi Redmi Go",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Xiaomi Redmi 9A",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Xiaomi Redmi 9C",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Xiaomi Redmi 9i",p:"Low-end",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi 1S",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Xiaomi Redmi 2",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Xiaomi Redmi 3S",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Xiaomi Redmi 4",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Xiaomi Redmi 4A",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Realme C1",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Realme C1 2019",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Realme C2",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Realme C11",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Realme C12",p:"Low-end",r:"3GB",s:"Large"},
+  {n:"Realme C15",p:"Low-end",r:"3GB",s:"Large"},
+  {n:"Realme C20",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Realme C25s",p:"Low-end",r:"4GB",s:"Large"},
+  {n:"Oppo A1k",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Oppo A3s",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Oppo A5s",p:"Low-end",r:"3GB",s:"Medium"},
+  {n:"Oppo A37",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Oppo A5 2018",p:"Low-end",r:"3GB",s:"Medium"},
+  {n:"Vivo Y11",p:"Low-end",r:"3GB",s:"Medium"},
+  {n:"Vivo Y15",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Vivo Y15s",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Vivo Y21",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Vivo Y91",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Vivo Y93",p:"Low-end",r:"3GB",s:"Medium"},
+  {n:"Huawei Y5 2019",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Huawei Y6 2019",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Huawei Y7 Prime 2019",p:"Low-end",r:"3GB",s:"Medium"},
+  {n:"Huawei Y9 2018",p:"Low-end",r:"3GB",s:"Large"},
+  {n:"Nokia 2.1",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Nokia 2.2",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Nokia 2.3",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Nokia 3.1",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Nokia 3.2",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Nokia 5.1",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Tecno Spark Go",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Tecno Spark Go 2020",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Tecno Pop 2",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Tecno Pop 2 Power",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Tecno Spark 3 Pro",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Infinix Hot 6",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Infinix Hot 7",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Infinix Hot 8",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Infinix Smart 3",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Infinix Smart 4",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Infinix Note 4",p:"Low-end",r:"3GB",s:"Medium"},
+  {n:"Itel A46",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Micromax Canvas 2",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Lava Z61",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Lava Z62",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Coolpad Cool 1",p:"Low-end",r:"3GB",s:"Medium"},
+  {n:"HTC Desire 626",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Asus Zenfone Go",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Lenovo A6600",p:"Low-end",r:"2GB",s:"Small"},
+  {n:"Lenovo K6 Power",p:"Low-end",r:"3GB",s:"Medium"},
+  {n:"Motorola Moto E5",p:"Low-end",r:"2GB",s:"Medium"},
+  {n:"Motorola Moto E6",p:"Low-end",r:"2GB",s:"Small"},
+
+  // ── MID-RANGE ──
+  {n:"Samsung Galaxy A21s",p:"Mid-range",r:"3GB",s:"Large"},
+  {n:"Samsung Galaxy A30",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Samsung Galaxy A30s",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Samsung Galaxy A31",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Samsung Galaxy A50",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Samsung Galaxy A50s",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Samsung Galaxy A51",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Samsung Galaxy A52",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy A52s",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy A53",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy A54",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy A55",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy M10",p:"Mid-range",r:"3GB",s:"Small"},
+  {n:"Samsung Galaxy M11",p:"Mid-range",r:"3GB",s:"Medium"},
+  {n:"Samsung Galaxy M20",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Samsung Galaxy M30",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Samsung Galaxy M30s",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Samsung Galaxy M31",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy M31s",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy M32",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Samsung Galaxy M33",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy M34",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy M51",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy F41",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy F62",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Redmi Note 5",p:"Mid-range",r:"3GB",s:"Medium"},
+  {n:"Xiaomi Redmi Note 5 Pro",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi Note 6 Pro",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi Note 7",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi Note 7S",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi Note 7 Pro",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi Note 8",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi Note 8 Pro",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Redmi Note 9",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi Note 9 Pro",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Xiaomi Redmi Note 9S",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi Note 9T",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi Note 10",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi Note 10 Pro",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Redmi Note 10S",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Redmi Note 10T",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi Note 11",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi Note 11SE",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi 9",p:"Mid-range",r:"3GB",s:"Medium"},
+  {n:"Xiaomi Redmi 9 Prime",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi 9 Power",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi 10",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Xiaomi Redmi 10C",p:"Mid-range",r:"3GB",s:"Medium"},
+  {n:"Xiaomi Redmi 10X",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Redmi 12",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Xiaomi Redmi 12C",p:"Mid-range",r:"3GB",s:"Medium"},
+  {n:"Xiaomi Mi A2",p:"Mid-range",r:"4GB",s:"Small"},
+  {n:"Xiaomi Mi A3",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Poco M2",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Poco M2 Pro",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Poco M3",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Xiaomi Poco M4 Pro",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Poco M5",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Xiaomi Poco M5s",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Xiaomi Poco M6 Pro",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Realme 3",p:"Mid-range",r:"3GB",s:"Medium"},
+  {n:"Realme 3 Pro",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Realme 5",p:"Mid-range",r:"3GB",s:"Medium"},
+  {n:"Realme 5 Pro",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Realme 5i",p:"Mid-range",r:"3GB",s:"Medium"},
+  {n:"Realme 6",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Realme 6i",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Realme 6 Pro",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Realme 7",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Realme 7i",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Realme 7 Pro",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Realme 8",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Realme 8 5G",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Realme 8i",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Realme 8 Pro",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Realme 9",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Realme 9 Pro",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Realme 9 Pro+",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Realme 10",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Realme 10 Pro",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Realme Narzo 20",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Realme Narzo 30",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Realme Narzo 30A",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Realme Narzo 50",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Realme Narzo 50A",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Realme Narzo 60",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Oppo A31",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Oppo A53",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Oppo A54",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Oppo A57",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Oppo A74",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Oppo A74 5G",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Oppo A76",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Oppo A77",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Oppo A78",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Oppo A79",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Oppo A83",p:"Mid-range",r:"3GB",s:"Medium"},
+  {n:"Oppo A9 2020",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Oppo Reno 2F",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Oppo Reno 2Z",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Oppo Reno 3 Pro",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Vivo Y20",p:"Mid-range",r:"3GB",s:"Medium"},
+  {n:"Vivo Y20G",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Vivo Y21A",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Vivo Y22",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Vivo Y28",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Vivo Y30",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Vivo Y33s",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Vivo Y35",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Vivo Y36",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Vivo Y50",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Vivo Y55",p:"Mid-range",r:"3GB",s:"Medium"},
+  {n:"Vivo Y72",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Vivo Y73",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Vivo Y100",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Motorola Moto G6",p:"Mid-range",r:"3GB",s:"Medium"},
+  {n:"Motorola Moto G7",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Motorola Moto G8",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Motorola Moto G8 Plus",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Motorola Moto G9",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Motorola Moto G9 Play",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Motorola Moto G24",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Motorola Moto G34",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Motorola Moto G54",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Motorola Moto G60",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Motorola Moto G84",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"OnePlus Nord",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"OnePlus Nord CE",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"OnePlus Nord CE 2",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"OnePlus Nord CE 3",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"OnePlus Nord N10",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"OnePlus Nord N20",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"OnePlus Nord N30",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Nothing Phone 2a",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Nokia 5.3",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Nokia 5.4",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Nokia 6.2",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Nokia 7.2",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Nokia X20",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Tecno Camon 15",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Tecno Camon 16",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Tecno Camon 17",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Tecno Camon 18",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Tecno Spark 7 Pro",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Tecno Spark 8 Pro",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Tecno Spark 10 Pro",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Tecno Spark 20 Pro",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Tecno Pova 3",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Tecno Pova 5",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Infinix Hot 9",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Infinix Hot 10",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Infinix Hot 10T",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Infinix Hot 11",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Infinix Hot 11S",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Infinix Hot 12",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Infinix Hot 12 Play",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Infinix Hot 20",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Infinix Hot 30",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Infinix Note 10",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Infinix Note 11",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Infinix Note 12",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Infinix Note 30",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Infinix Zero 5G",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Infinix Zero 30",p:"Mid-range",r:"6GB+",s:"Large"},
+  {n:"Huawei P30 Lite",p:"Mid-range",r:"4GB",s:"Medium"},
+  {n:"Huawei P40 Lite",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Huawei Nova 7i",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Huawei Y9 Prime 2019",p:"Mid-range",r:"4GB",s:"Large"},
+  {n:"Google Pixel 4a",p:"Mid-range",r:"6GB+",s:"Small"},
+  {n:"Google Pixel 5a",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Sony Xperia 10 IV",p:"Mid-range",r:"6GB+",s:"Medium"},
+  {n:"Sony Xperia 10 V",p:"Mid-range",r:"6GB+",s:"Medium"},
+
+  // ── HIGH-END ──
+  {n:"Samsung Galaxy S10",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy S10+",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy S10e",p:"High-end",r:"6GB+",s:"Small"},
+  {n:"Samsung Galaxy S10 Lite",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy S20",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy S20+",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy S20 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy S20 FE",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy S21",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy S21+",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy S21 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy S21 FE",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy S22",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy S22+",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy S22 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy S23",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy S23+",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy S23 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy S23 FE",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy S24",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy S24+",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy S24 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy S24 FE",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy S25",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy S25+",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy S25 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy Note 10",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy Note 10+",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy Note 20",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy Note 20 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy A73",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy Z Fold 3",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy Z Fold 4",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy Z Fold 5",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy Z Fold 6",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Samsung Galaxy Z Flip 3",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy Z Flip 4",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy Z Flip 5",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Samsung Galaxy Z Flip 6",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi 11T",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi 11T Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi 11 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Xiaomi 12",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi 12 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Xiaomi 12 Lite",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi 13",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi 13 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Xiaomi 13 Lite",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi 13 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Xiaomi 14",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi 14 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Xiaomi 14 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Xiaomi 15",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi 15 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Xiaomi Redmi Note 11 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Redmi Note 11 Pro+",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Redmi Note 12 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Redmi Note 12 Pro+",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Redmi Note 12 Discovery",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Redmi Note 13 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Redmi Note 13 Pro+",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Poco F3",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Poco F4",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Poco F5",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Poco F5 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Xiaomi Poco F6",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Xiaomi Poco F6 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Xiaomi Poco X3 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Xiaomi Poco X4 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Xiaomi Poco X5 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Xiaomi Poco X6 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Xiaomi Poco X7 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Realme GT",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Realme GT Master",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Realme GT Neo",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Realme GT Neo 2",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Realme GT Neo 3",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Realme GT Neo 3T",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Realme GT Neo 5",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Realme GT Neo 6",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Realme GT 2",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Realme GT 2 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Realme GT 3",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Realme GT 5",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Realme GT 5 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Realme GT 6",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Realme 12 Pro+",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Realme 13 Pro+",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Oppo Find X",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Oppo Find X2",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Oppo Find X3",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Oppo Find X3 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Oppo Find X5",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Oppo Find X5 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Oppo Find X6",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Oppo Find X6 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Oppo Find X7",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Oppo Find X7 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Oppo Find X8",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Oppo Find X8 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Oppo Reno 5 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Oppo Reno 6 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Oppo Reno 7 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Oppo Reno 8 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Oppo Reno 9 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Oppo Reno 10 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Oppo Reno 10 Pro+",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Oppo Reno 11 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Oppo Reno 12 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo X60 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo X60 Pro+",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Vivo X70 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo X70 Pro+",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Vivo X80",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo X80 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Vivo X90",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo X90 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Vivo X90 Pro+",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Vivo X100",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo X100 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Vivo X200",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo X200 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Vivo V21",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo V21 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo V23",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo V23 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo V25",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo V25 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo V27",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo V27 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo V29",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo V29 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo V30",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo V30 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo V40",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo V40 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo iQOO 3",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo iQOO 7",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo iQOO 9",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo iQOO 9 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Vivo iQOO 10",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo iQOO 10 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Vivo iQOO 11",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Vivo iQOO 11 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Vivo iQOO 12",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Vivo iQOO 12 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Vivo iQOO Neo 6",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo iQOO Neo 7",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo iQOO Neo 7 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo iQOO Neo 9",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo iQOO Neo 9 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo iQOO Z7 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo iQOO Z9",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Vivo iQOO Z9 Turbo",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"OnePlus 7",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"OnePlus 7 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"OnePlus 7T",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"OnePlus 7T Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"OnePlus 8",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"OnePlus 8 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"OnePlus 8T",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"OnePlus 9",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"OnePlus 9 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"OnePlus 9R",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"OnePlus 9RT",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"OnePlus 10 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"OnePlus 10R",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"OnePlus 10T",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"OnePlus 11",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"OnePlus 11R",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"OnePlus 12",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"OnePlus 12R",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"OnePlus 13",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"OnePlus 13R",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"OnePlus Ace 2",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"OnePlus Ace 3",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone XR",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"iPhone XS",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone XS Max",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"iPhone 11",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone 11 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone 11 Pro Max",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"iPhone SE 2",p:"High-end",r:"6GB+",s:"Small"},
+  {n:"iPhone SE 3",p:"High-end",r:"6GB+",s:"Small"},
+  {n:"iPhone 12 mini",p:"High-end",r:"6GB+",s:"Small"},
+  {n:"iPhone 12",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone 12 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone 12 Pro Max",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"iPhone 13 mini",p:"High-end",r:"6GB+",s:"Small"},
+  {n:"iPhone 13",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone 13 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone 13 Pro Max",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"iPhone 14",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone 14 Plus",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"iPhone 14 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone 14 Pro Max",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"iPhone 15",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone 15 Plus",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"iPhone 15 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone 15 Pro Max",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"iPhone 16",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone 16 Plus",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"iPhone 16 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"iPhone 16 Pro Max",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Google Pixel 6",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Google Pixel 6 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Google Pixel 7",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Google Pixel 7 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Google Pixel 7a",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Google Pixel 8",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Google Pixel 8 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Google Pixel 8a",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Google Pixel 9",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Google Pixel 9 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Google Pixel 9 Pro XL",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Asus ROG Phone 2",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Asus ROG Phone 3",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Asus ROG Phone 5",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Asus ROG Phone 6",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Asus ROG Phone 7",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Asus ROG Phone 8",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Asus Zenfone 7",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Asus Zenfone 8",p:"High-end",r:"6GB+",s:"Small"},
+  {n:"Asus Zenfone 9",p:"High-end",r:"6GB+",s:"Small"},
+  {n:"Asus Zenfone 10",p:"High-end",r:"6GB+",s:"Small"},
+  {n:"Asus Zenfone 11 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Nothing Phone 1",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Nothing Phone 2",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Nothing Phone 2a Plus",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Nothing Phone 3",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Sony Xperia 1 IV",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Sony Xperia 1 V",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Sony Xperia 1 VI",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Sony Xperia 5 IV",p:"High-end",r:"6GB+",s:"Small"},
+  {n:"Sony Xperia 5 V",p:"High-end",r:"6GB+",s:"Small"},
+  {n:"Honor Magic 5 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Honor Magic 6 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Honor 90",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Honor 200 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Motorola Edge 30",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Motorola Edge 30 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Motorola Edge 40",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Motorola Edge 40 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Motorola Edge 50 Pro",p:"High-end",r:"6GB+",s:"Medium"},
+  {n:"Motorola Edge 50 Ultra",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Razer Phone 2",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Nubia Red Magic 7",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Nubia Red Magic 8 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Nubia Red Magic 9 Pro",p:"High-end",r:"6GB+",s:"Large"},
+  {n:"Nubia Red Magic 9S Pro",p:"High-end",r:"6GB+",s:"Large"},
+];
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let selDev = null;
+let sel = { perf: null, screen: null, style: null };
+let autoP = false, autoS = false;
+let result = null;
+let slidersOn = false;
+
+const RANGES = {
+  General: [70,100], "Red Dot": [70,100], "2x Scope": [60,90],
+  "4x Scope": [50,80], "AWM Scope": [40,70], "Free Look": [50,80]
+};
+const KEYS = ["General","Red Dot","2x Scope","4x Scope","AWM Scope","Free Look"];
+const PROG = KEYS.slice(0,5);
+
+// ═══════════════════════════════════════════
+// EMBERS
+// ═══════════════════════════════════════════
+(function(){
+  const bg = document.getElementById('bgFx');
+  for(let i=0;i<18;i++){
+    const e = document.createElement('div');
+    e.className='ember';
+    e.style.left=Math.random()*100+'%';
+    e.style.top=55+Math.random()*45+'%';
+    e.style.animationDuration=2.5+Math.random()*3+'s';
+    e.style.animationDelay=Math.random()*6+'s';
+    const sz=2+Math.random()*3;
+    e.style.width=sz+'px'; e.style.height=sz+'px';
+    e.style.background=['#ff6a00','#ff9b2e','#ff3d00','#ffd600'][Math.floor(Math.random()*4)];
+    bg.appendChild(e);
+  }
+})();
+
+// ═══════════════════════════════════════════
+// BUILD OPTION BUTTONS
+// ═══════════════════════════════════════════
+function buildOpts(id, items, type){
+  const g = document.getElementById(id);
+  g.innerHTML = '';
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.className = 'opt-btn';
+    b.dataset.value = it.value;
+    b.innerHTML = it.icon + ' ' + it.label;
+    b.addEventListener('click', () => pickOpt(type, it.value));
+    g.appendChild(b);
+  });
+}
+
+buildOpts('perfGrid', [
+  {value:'Low-end', label:'Low-end', icon:ICO.batteryQ},
+  {value:'Mid-range', label:'Mid-range', icon:ICO.batteryH},
+  {value:'High-end', label:'High-end', icon:ICO.batteryF},
+], 'perf');
+
+buildOpts('scrGrid', [
+  {value:'Small', label:'Small (<6")', icon:ICO.phoneS},
+  {value:'Medium', label:'Medium (6-6.5")', icon:ICO.tablet},
+  {value:'Large', label:'Large (>6.5")', icon:ICO.monitor},
+], 'screen');
+
+buildOpts('styleGrid', [
+  {value:'Aggressive', label:'Aggressive', icon:ICO.fire},
+  {value:'Balanced', label:'Balanced', icon:ICO.balance},
+  {value:'Sniper', label:'Sniper', icon:ICO.crosshair},
+], 'style');
+
+// ═══════════════════════════════════════════
+// BUILD DEVICE LIST
+// ═══════════════════════════════════════════
+function buildDevs(f=''){
+  const c = document.getElementById('devList');
+  c.innerHTML = '';
+  const lf = f.toLowerCase();
+  const cats = [
+    {l:'Low-End Devices', t:'low', d:DB.filter(d=>d.p==='Low-end')},
+    {l:'Mid-Range Devices', t:'mid', d:DB.filter(d=>d.p==='Mid-range')},
+    {l:'High-End Devices', t:'high', d:DB.filter(d=>d.p==='High-end')},
+  ];
+  let any = false;
+  cats.forEach(cat=>{
+    const fd = cat.d.filter(d=>d.n.toLowerCase().includes(lf));
+    if(!fd.length) return;
+    any = true;
+    const div = document.createElement('div');
+    div.className='dev-cat';
+    div.innerHTML=`<div class="cat-lbl">${cat.l} <span class="tier tier-${cat.t}">${fd.length}</span></div>`;
+    const grid = document.createElement('div');
+    grid.className='dev-grid';
+    fd.forEach(d=>{
+      const b = document.createElement('button');
+      b.className='dev-btn'+(selDev&&selDev.n===d.n?' sel':'');
+      b.textContent=d.n;
+      b.addEventListener('click',()=>pickDev(d));
+      grid.appendChild(b);
+    });
+    div.appendChild(grid);
+    c.appendChild(div);
+  });
+  if(!any) c.innerHTML='<div class="no-res">No devices found. Select options manually below.</div>';
+}
+
+document.getElementById('devSearch').addEventListener('input',function(){buildDevs(this.value.trim())});
+buildDevs();
+
+// ═══════════════════════════════════════════
+// SELECTION LOGIC
+// ═══════════════════════════════════════════
+function pickDev(d){
+  selDev=d;
+  autoP=true; sel.perf=d.p;
+  document.getElementById('autoPerf').classList.add('show');
+  hilite('perf',d.p);
+
+  autoS=true; sel.screen=d.s;
+  document.getElementById('autoScr').classList.add('show');
+  hilite('screen',d.s);
+
+  buildDevs(document.getElementById('devSearch').value.trim());
+  steps(); ready();
+}
+
+function pickOpt(type,val){
+  sel[type]=val;
+  if(type==='perf'){autoP=false;document.getElementById('autoPerf').classList.remove('show')}
+  if(type==='screen'){autoS=false;document.getElementById('autoScr').classList.remove('show')}
+  hilite(type,val);
+  steps(); ready();
+}
+
+function hilite(type,val){
+  const gid=type==='perf'?'perfGrid':type==='screen'?'scrGrid':'styleGrid';
+  document.getElementById(gid).querySelectorAll('.opt-btn').forEach(b=>{
+    b.classList.toggle('sel',b.dataset.value===val);
+  });
+}
+
+function steps(){
+  const s1=document.getElementById('s1'),s2=document.getElementById('s2'),
+        s3=document.getElementById('s3'),s4=document.getElementById('s4');
+  s1.className='step-d '+(selDev?'done':'active');
+  s2.className='step-d '+((sel.perf)?'done':(selDev?'active':''));
+  s3.className='step-d '+((sel.screen)?'done':(sel.perf?'active':''));
+  s4.className='step-d '+((sel.style)?'done':(sel.screen?'active':''));
+}
+
+function ready(){
+  document.getElementById('genBtn').disabled = !(sel.perf && sel.screen && sel.style);
+}
+
+// ═══════════════════════════════════════════
+// CALCULATION ENGINE
+// ═══════════════════════════════════════════
+function calc(){
+  const {perf,screen,style}=sel;
+
+  // Base per playstyle
+  let bases;
+  if(style==='Aggressive') bases={General:97,"Red Dot":93,"2x Scope":82,"4x Scope":70,"AWM Scope":56,"Free Look":72};
+  else if(style==='Sniper') bases={General:78,"Red Dot":75,"2x Scope":66,"4x Scope":55,"AWM Scope":44,"Free Look":62};
+  else bases={General:87,"Red Dot":84,"2x Scope":74,"4x Scope":63,"AWM Scope":50,"Free Look":67};
+
+  // Performance adjust
+  let pa = perf==='Low-end'? -4 : perf==='Mid-range'? 0 : 3;
+
+  // Screen adjust
+  let sa = screen==='Small'? 3 : screen==='Medium'? 0 : -3;
+
+  // RAM adjust
+  let ra = 0;
+  if(selDev){
+    ra = selDev.r==='2GB'? -3 : selDev.r==='3GB'? -1 : selDev.r==='4GB'? 0 : 1;
+  } else {
+    ra = perf==='Low-end'? -2 : perf==='Mid-range'? 0 : 1;
+  }
+
+  // Fine playstyle tweaks per scope
+  let st = {};
+  if(style==='Aggressive'){
+    st={"General":2,"Red Dot":3,"2x Scope":0,"4x Scope":-2,"AWM Scope":-4,"Free Look":1};
+  } else if(style==='Sniper'){
+    st={"General":-1,"Red Dot":0,"2x Scope":-1,"4x Scope":-2,"AWM Scope":-3,"Free Look":3};
+  } else {
+    st={"General":0,"Red Dot":0,"2x Scope":0,"4x Scope":0,"AWM Scope":0,"Free Look":0};
+  }
+
+  const res={};
+  KEYS.forEach(k=>{
+    let v=bases[k]+pa+sa+ra+st[k];
+    v=Math.max(RANGES[k][0],Math.min(RANGES[k][1],Math.round(v)));
+    res[k]=v;
+  });
+
+  // Enforce smooth progression
+  for(let i=1;i<PROG.length;i++){
+    if(res[PROG[i]]>res[PROG[i-1]]) res[PROG[i]]=res[PROG[i-1]];
+  }
+
+  // Clamp Free Look independently
+  res["Free Look"]=Math.max(RANGES["Free Look"][0],Math.min(RANGES["Free Look"][1],res["Free Look"]));
+
+  return res;
+}
+
+// ═══════════════════════════════════════════
+// GENERATE
+// ═══════════════════════════════════════════
+document.getElementById('genBtn').addEventListener('click',generate);
+
+function generate(){
+  result = calc();
+  const panel = document.getElementById('resultPanel');
+  panel.classList.add('show');
+  slidersOn = false;
+  document.getElementById('adjTrack').classList.remove('on');
+
+  // Tags
+  const tags = document.getElementById('tags');
+  tags.innerHTML='';
+  const tData=[
+    {i:'<svg viewBox="0 0 24 24" width="11" height="11" fill="var(--accent)"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>', t:selDev?selDev.n:'Custom'},
+    {i:'<svg viewBox="0 0 24 24" width="11" height="11" fill="var(--accent)"><path d="M12 2c-5.52 0-10 4.48-10 10s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93z"/></svg>', t:sel.perf+(autoP?' (Auto)':'')},
+    {i:'<svg viewBox="0 0 24 24" width="11" height="11" fill="var(--accent)"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14z"/></svg>', t:sel.screen+(autoS?' (Auto)':'')},
+    {i:'<svg viewBox="0 0 24 24" width="11" height="11" fill="var(--accent)"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>', t:sel.style},
+  ];
+  if(selDev) tData.push({i:'<svg viewBox="0 0 24 24" width="11" height="11" fill="var(--accent)"><path d="M15 9H9v6h6V9zm-2 4h-2v-2h2v2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2zm-4 6H7V7h10v10z"/></svg>', t:selDev.r+' RAM'});
+  tData.forEach(t=>{
+    const el=document.createElement('div');
+    el.className='tag';
+    el.innerHTML=t.i+' '+t.t;
+    tags.appendChild(el);
+  });
+
+  renderBars();
+  renderSliders();
+
+  // Tips
+  const tips={
+    Aggressive:"With high general sensitivity, practice drag-headshots in training ground for 10 minutes daily. Avoid over-correcting by using your thumb base for large swipes and the tip for micro-adjustments. Your scope sensitivities are slightly lower to prevent wobble during rush plays. On low-end devices, these values are reduced to maintain stable FPS during heavy fights.",
+    Balanced:"Your settings are tuned for versatility — comfortable in rushes and mid-range fights. Practice switching between Red Dot and 2x smoothly since those values are close. Use 4x for zone-line fights and AWM for stationary targets. This profile works well for Clash Squad ranked where adaptability matters most.",
+    Sniper:"Scope sensitivities are deliberately low for precise long-range tracking. Use the high Free Look value to scan without moving your aim. In close-range fights, rely on quick-scoping with Red Dot rather than hip-fire. Pair with a shotgun or SMG for backup. These values ensure your crosshair barely drifts when tracking moving targets at long range."
+  };
+  document.getElementById('tipTxt').textContent=tips[sel.style];
+
+  loadHist();
+
+  setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'start'}),150);
+}
+
+// ═══════════════════════════════════════════
+// RENDER BARS
+// ═══════════════════════════════════════════
+function renderBars(){
+  const c=document.getElementById('sensDisplay');
+  c.innerHTML='';
+  KEYS.forEach((k,i)=>{
+    const v=result[k];
+    const pct=((v-RANGES[k][0])/(RANGES[k][1]-RANGES[k][0]))*100;
+    const bc=pct<33?'bl':pct<66?'bm':pct<85?'bh':'bv';
+    const vc=pct<33?'#ff3d00':pct<66?'#ff9b2e':pct<85?'#ffd600':'#00e676';
+
+    const row=document.createElement('div');
+    row.className='s-row';
+    row.innerHTML=`<div class="s-lbl">${k}</div><div class="s-bar-wrap"><div class="s-bar ${bc}" id="bar_${i}"></div></div><div class="s-val" style="color:${vc}" id="val_${i}">${v}</div>`;
+    c.appendChild(row);
+    setTimeout(()=>{document.getElementById('bar_'+i).style.width=pct+'%'},80+i*70);
+  });
+}
+
+// ═══════════════════════════════════════════
+// RENDER SLIDERS
+// ═══════════════════════════════════════════
+function renderSliders(){
+  const c=document.getElementById('sensSliders');
+  c.innerHTML='';
+  KEYS.forEach((k,i)=>{
+    const row=document.createElement('div');
+    row.className='adj-row';
+    const sl=document.createElement('input');
+    sl.type='range'; sl.className='adj-slider'; sl.min=RANGES[k][0]; sl.max=RANGES[k][1]; sl.value=result[k];
+    sl.id='sl_'+i;
+
+    const val=document.createElement('div');
+    val.className='s-val'; val.style.fontSize='14px'; val.style.width='30px';
+    val.id='slv_'+i; val.textContent=result[k];
+    const pct=((result[k]-RANGES[k][0])/(RANGES[k][1]-RANGES[k][0]))*100;
+    val.style.color=pct<33?'#ff3d00':pct<66?'#ff9b2e':pct<85?'#ffd600':'#00e676';
+
+    const lbl=document.createElement('div');
+    lbl.className='s-lbl'; lbl.style.fontSize='11px'; lbl.textContent=k;
+
+    sl.addEventListener('input',function(){
+      const nv=parseInt(this.value);
+      result[k]=nv;
+      val.textContent=nv;
+      const np=((nv-RANGES[k][0])/(RANGES[k][1]-RANGES[k][0]))*100;
+      val.style.color=np<33?'#ff3d00':np<66?'#ff9b2e':np<85?'#ffd600':'#00e676';
+      // Update bar
+      const bar=document.getElementById('bar_'+i);
+      if(bar) bar.style.width=np+'%';
+      const vbar=document.getElementById('val_'+i);
+      if(vbar){vbar.textContent=nv;vbar.style.color=val.style.color}
+    });
+
+    row.appendChild(lbl);
+    row.appendChild(sl);
+    row.appendChild(val);
+    c.appendChild(row);
+  });
+}
+
+// ═══════════════════════════════════════════
+// SLIDER TOGGLE
+// ═══════════════════════════════════════════
+document.getElementById('adjToggle').addEventListener('click',function(){
+  slidersOn=!slidersOn;
+  document.getElementById('adjTrack').classList.toggle('on',slidersOn);
+  document.getElementById('sensSliders').style.display=slidersOn?'block':'none';
+});
+
+// ═══════════════════════════════════════════
+// COPY
+// ═══════════════════════════════════════════
+document.getElementById('copyBtn').addEventListener('click',function(){
+  if(!result) return;
+  const txt=`Result:\n- General: ${result.General}\n- Red Dot: ${result["Red Dot"]}\n- 2x Scope: ${result["2x Scope"]}\n- 4x Scope: ${result["4x Scope"]}\n- AWM Scope: ${result["AWM Scope"]}\n- Free Look: ${result["Free Look"]}`;
+  navigator.clipboard.writeText(txt).then(()=>{
+    this.classList.add('ok');
+    this.innerHTML='<svg viewBox="0 0 24 24" width="13" height="13" fill="var(--green)"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Copied';
+    toast('Settings copied to clipboard');
+    setTimeout(()=>{this.classList.remove('ok');this.innerHTML='<svg viewBox="0 0 24 24" width="13" height="13" fill="var(--muted)"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> Copy'},2000);
+  }).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    toast('Settings copied');
+  });
+});
+
+// ═══════════════════════════════════════════
+// SAVE (localStorage)
+// ═══════════════════════════════════════════
+document.getElementById('saveBtn').addEventListener('click',function(){
+  if(!result) return;
+  const hist=JSON.parse(localStorage.getItem('ff_hist')||'[]');
+  hist.unshift({
+    id: Date.now(),
+    dev: selDev?selDev.n:'Custom',
+    perf: sel.perf, screen: sel.screen, style: sel.style,
+    vals: {...result},
+    date: new Date().toLocaleDateString()
+  });
+  if(hist.length>20) hist.length=20;
+  localStorage.setItem('ff_hist',JSON.stringify(hist));
+  this.classList.add('ok');
+  this.innerHTML='<svg viewBox="0 0 24 24" width="13" height="13" fill="var(--green)"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Saved';
+  toast('Settings saved to history');
+  setTimeout(()=>{this.classList.remove('ok');this.innerHTML='<svg viewBox="0 0 24 24" width="13" height="13" fill="var(--muted)"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg> Save'},2000);
+  loadHist();
+});
+
+function loadHist(){
+  const hist=JSON.parse(localStorage.getItem('ff_hist')||'[]');
+  const card=document.getElementById('histCard');
+  const list=document.getElementById('histList');
+  if(!hist.length){card.style.display='none';return;}
+  card.style.display='block';
+  list.innerHTML='';
+  hist.forEach(h=>{
+    const el=document.createElement('div');
+    el.className='hist-item';
+    const vals=KEYS.map(k=>`<span class="hist-v">${h.vals[k]}</span>`).join('');
+    el.innerHTML=`<div class="hist-info"><div class="hi-name">${h.dev}</div><div class="hi-meta">${h.perf} / ${h.screen} / ${h.style} — ${h.date}</div></div><div class="hist-vals">${vals}</div><button class="hist-del" aria-label="Delete"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>`;
+    el.querySelector('.hist-del').addEventListener('click',function(e){
+      e.stopPropagation();
+      const nh=hist.filter(x=>x.id!==h.id);
+      localStorage.setItem('ff_hist',JSON.stringify(nh));
+      loadHist();
+      toast('Entry removed');
+    });
+    el.addEventListener('click',()=>{
+      result={...h.vals};
+      sel.perf=h.perf; sel.screen=h.screen; sel.style=h.style;
+      // Try to find device
+      selDev=DB.find(d=>d.n===h.dev)||null;
+      if(selDev){autoP=true;autoS=true;document.getElementById('autoPerf').classList.add('show');document.getElementById('autoScr').classList.add('show');}
+      hilite('perf',h.perf);hilite('screen',h.screen);hilite('style',h.style);
+      document.getElementById('resultPanel').classList.add('show');
+      slidersOn=false;document.getElementById('adjTrack').classList.remove('on');
+      // Re-render tags
+      const tags=document.getElementById('tags');
+      tags.innerHTML='';
+      [{t:h.dev},{t:h.perf},{t:h.screen},{t:h.style}].forEach(t=>{
+        const e2=document.createElement('div');e2.className='tag';e2.innerHTML='<svg viewBox="0 0 24 24" width="11" height="11" fill="var(--accent)"><circle cx="12" cy="12" r="3"/></svg> '+t.t;tags.appendChild(e2);
+      });
+      renderBars();renderSliders();loadHist();
+      steps();ready();
+      toast('Loaded saved settings');
+    });
+    list.appendChild(el);
+  });
+}
+
+// ═══════════════════════════════════════════
+// EXPORT IMAGE (Canvas)
+// ═══════════════════════════════════════════
+document.getElementById('imgBtn').addEventListener('click',function(){
+  if(!result) return;
+  const cv=document.getElementById('expCanvas');
+  const W=600, H=480;
+  cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d');
+
+  // Background
+  ctx.fillStyle='#0a0a14';
+  ctx.fillRect(0,0,W,H);
+
+  // Accent bar top
+  const grd=ctx.createLinearGradient(0,0,W,0);
+  grd.addColorStop(0,'#ff6a00');
+  grd.addColorStop(1,'#c62828');
+  ctx.fillStyle=grd;
+  ctx.fillRect(0,0,W,4);
+
+  // Title
+  ctx.fillStyle='#ffffff';
+  ctx.font='bold 22px -apple-system, sans-serif';
+  ctx.fillText('Free Fire Sensitivity', 24, 44);
+  ctx.fillStyle='#6a6a88';
+  ctx.font='12px -apple-system, sans-serif';
+  ctx.fillText(`${selDev?selDev.n:'Custom'}  |  ${sel.perf}  |  ${sel.screen}  |  ${sel.style}`, 24, 66);
+
+  // Separator
+  ctx.strokeStyle='#1f1f35';
+  ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(24,80);ctx.lineTo(W-24,80);ctx.stroke();
+
+  // Rows
+  const startY=112;
+  const rowH=52;
+  KEYS.forEach((k,i)=>{
+    const y=startY+i*rowH;
+    const v=result[k];
+    const pct=(v-RANGES[k][0])/(RANGES[k][1]-RANGES[k][0]);
+
+    // Label
+    ctx.fillStyle='#8888a0';
+    ctx.font='bold 13px -apple-system, sans-serif';
+    ctx.fillText(k, 24, y);
+
+    // Bar bg
+    ctx.fillStyle='#1a1a2e';
+    roundRect(ctx,130,y-14,W-200,10,5);
+    ctx.fill();
+
+    // Bar fill
+    const barW=Math.max(4,(W-200)*pct);
+    const barGrd=ctx.createLinearGradient(130,0,130+barW,0);
+    if(pct<.33){barGrd.addColorStop(0,'#c62828');barGrd.addColorStop(1,'#ff3d00')}
+    else if(pct<.66){barGrd.addColorStop(0,'#ff6a00');barGrd.addColorStop(1,'#ff9b2e')}
+    else if(pct<.85){barGrd.addColorStop(0,'#ff9b2e');barGrd.addColorStop(1,'#ffd600')}
+    else{barGrd.addColorStop(0,'#ffd600');barGrd.addColorStop(1,'#00e676')}
+    ctx.fillStyle=barGrd;
+    roundRect(ctx,130,y-14,barW,10,5);
+    ctx.fill();
+
+    // Value
+    ctx.fillStyle=pct<.33?'#ff3d00':pct<.66?'#ff9b2e':pct<.85?'#ffd600':'#00e676';
+    ctx.font='bold 20px -apple-system, sans-serif';
+    ctx.textAlign='right';
+    ctx.fillText(v.toString(), W-24, y+2);
+    ctx.textAlign='left';
+  });
+
+  // Footer
+  ctx.fillStyle='#333350';
+  ctx.font='10px -apple-system, sans-serif';
+  ctx.fillText('FF Sensitivity Optimizer — Offline Tool', 24, H-16);
+
+  // Download
+  const link=document.createElement('a');
+  link.download='ff-sensitivity.png';
+  link.href=cv.toDataURL('image/png');
+  link.click();
+  toast('Image saved');
+});
+
+function roundRect(ctx,x,y,w,h,r){
+  r=Math.min(r,w/2,h/2);
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+// ═══════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════
+function toast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ═══════════════════════════════════════════
+// LOAD HISTORY ON INIT
+// ═══════════════════════════════════════════
+loadHist();
+</script>
+</body>
+</html>
