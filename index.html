@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FF Sensitivity Optimizer — Offline</title>
+<title>NAYT FF Sensitivity</title>
 <style>
   :root {
     --bg: #06060c;
@@ -360,7 +360,7 @@
     <div class="logo">
       <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/><circle cx="12" cy="12" r="3" fill="none" stroke="#fff" stroke-width="1.5"/><line x1="12" y1="2" x2="12" y2="6" stroke="#fff" stroke-width="1.5"/><line x1="12" y1="18" x2="12" y2="22" stroke="#fff" stroke-width="1.5"/><line x1="2" y1="12" x2="6" y2="12" stroke="#fff" stroke-width="1.5"/><line x1="18" y1="12" x2="22" y2="12" stroke="#fff" stroke-width="1.5"/></svg>
     </div>
-    <h1>Free Fire Sensitivity<br>Optimizer</h1>
+    <h1>NAYT<br>Free Fire Sensitivity</h1>
     <p class="sub">Precision-tuned for your exact device and playstyle</p>
     <div class="offline-badge"><span class="dot"></span> 100% Offline</div>
   </header>
@@ -1007,8 +1007,8 @@ let result = null;
 let slidersOn = false;
 
 const RANGES = {
-  General: [70,100], "Red Dot": [70,100], "2x Scope": [60,90],
-  "4x Scope": [50,80], "AWM Scope": [40,70], "Free Look": [50,80]
+  General: [140,200], "Red Dot": [140,200], "2x Scope": [120,180],
+  "4x Scope": [100,160], "AWM Scope": [80,140], "Free Look": [100,160]
 };
 const KEYS = ["General","Red Dot","2x Scope","4x Scope","AWM Scope","Free Look"];
 const PROG = KEYS.slice(0,5);
@@ -1061,7 +1061,7 @@ buildOpts('scrGrid', [
 ], 'screen');
 
 buildOpts('styleGrid', [
-  {value:'Aggressive', label:'Aggressive', icon:ICO.fire},
+  {value:'FreeStyle', label:'FreeStyle', icon:ICO.fire},
   {value:'Balanced', label:'Balanced', icon:ICO.balance},
   {value:'Sniper', label:'Sniper', icon:ICO.crosshair},
 ], 'style');
@@ -1157,9 +1157,9 @@ function calc(){
 
   // Base per playstyle
   let bases;
-  if(style==='Aggressive') bases={General:97,"Red Dot":93,"2x Scope":82,"4x Scope":70,"AWM Scope":56,"Free Look":72};
-  else if(style==='Sniper') bases={General:78,"Red Dot":75,"2x Scope":66,"4x Scope":55,"AWM Scope":44,"Free Look":62};
-  else bases={General:87,"Red Dot":84,"2x Scope":74,"4x Scope":63,"AWM Scope":50,"Free Look":67};
+  if(style==='Freestyle') bases={General:194,"Red Dot":186,"2x Scope":164,"4x Scope":140,"AWM Scope":112,"Free Look":144};
+  else if(style==='Sniper') bases={General:156,"Red Dot":150,"2x Scope":172,"4x Scope":110,"AWM Scope":88,"Free Look":124};
+  else bases={General:174,"Red Dot":168,"2x Scope":148,"4x Scope":126,"AWM Scope":100,"Free Look":134};
 
   // Performance adjust
   let pa = perf==='Low-end'? -4 : perf==='Mid-range'? 0 : 3;
@@ -1177,7 +1177,7 @@ function calc(){
 
   // Fine playstyle tweaks per scope
   let st = {};
-  if(style==='Aggressive'){
+  if(style==='FreeStyle'){
     st={"General":2,"Red Dot":3,"2x Scope":0,"4x Scope":-2,"AWM Scope":-4,"Free Look":1};
   } else if(style==='Sniper'){
     st={"General":-1,"Red Dot":0,"2x Scope":-1,"4x Scope":-2,"AWM Scope":-3,"Free Look":3};
@@ -1237,7 +1237,7 @@ function generate(){
 
   // Tips
   const tips={
-    Aggressive:"With high general sensitivity, practice drag-headshots in training ground for 10 minutes daily. Avoid over-correcting by using your thumb base for large swipes and the tip for micro-adjustments. Your scope sensitivities are slightly lower to prevent wobble during rush plays. On low-end devices, these values are reduced to maintain stable FPS during heavy fights.",
+    FreeStyle:"With high general sensitivity, practice drag-headshots in training ground for 10 minutes daily. Avoid over-correcting by using your thumb base for large swipes and the tip for micro-adjustments. Your scope sensitivities are slightly lower to prevent wobble during rush plays. On low-end devices, these values are reduced to maintain stable FPS during heavy fights.",
     Balanced:"Your settings are tuned for versatility — comfortable in rushes and mid-range fights. Practice switching between Red Dot and 2x smoothly since those values are close. Use 4x for zone-line fights and AWM for stationary targets. This profile works well for Clash Squad ranked where adaptability matters most.",
     Sniper:"Scope sensitivities are deliberately low for precise long-range tracking. Use the high Free Look value to scan without moving your aim. In close-range fights, rely on quick-scoping with Red Dot rather than hip-fire. Pair with a shotgun or SMG for backup. These values ensure your crosshair barely drifts when tracking moving targets at long range."
   };
